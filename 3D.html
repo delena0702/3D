@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>3D Test</title>
+    <style>
+    </style>
+    <script>
+        //////////////////////////////////////////////////
+        var width = 500, height = 500;
+        var player = [0, 0, 0];
+        var theta = Math.PI / 2, pi = 0;
+        var sc = 50;
+        var ctx;
+        var objs = [[[3, 0, 0], [1, 1, 1], [1, 1, -1], randomColor('aa')],
+        [[3, 0, 0], [1, 1, -1], [1, -1, -1], randomColor('aa')],
+        [[3, 0, 0], [1, -1, -1], [1, -1, 1], randomColor('aa')],
+        [[3, 0, 0], [1, -1, 1], [1, 1, 1], randomColor('aa')],
+        [[-3, 0, 0], [-1, 1, 1], [-1, 1, -1], randomColor('aa')],
+        [[-3, 0, 0], [-1, 1, -1], [-1, -1, -1], randomColor('aa')],
+        [[-3, 0, 0], [-1, -1, -1], [-1, -1, 1], randomColor('aa')],
+        [[-3, 0, 0], [-1, -1, 1], [-1, 1, 1], randomColor('aa')],
+        [[0, 3, 0], [1, 1, 1], [1, 1, -1], randomColor('aa')],
+        [[0, 3, 0], [1, 1, -1], [-1, 1, -1], randomColor('aa')],
+        [[0, 3, 0], [-1, 1, -1], [-1, 1, 1], randomColor('aa')],
+        [[0, 3, 0], [-1, 1, 1], [1, 1, 1], randomColor('aa')],
+        [[0, -3, 0], [1, -1, 1], [1, -1, -1], randomColor('aa')],
+        [[0, -3, 0], [1, -1, -1], [-1, -1, -1], randomColor('aa')],
+        [[0, -3, 0], [-1, -1, -1], [-1, -1, 1], randomColor('aa')],
+        [[0, -3, 0], [-1, -1, 1], [1, -1, 1], randomColor('aa')],
+        [[0, 0, 3], [1, 1, 1], [1, -1, 1], randomColor('aa')],
+        [[0, 0, 3], [1, -1, 1], [-1, -1, 1], randomColor('aa')],
+        [[0, 0, 3], [-1, -1, 1], [-1, 1, 1], randomColor('aa')],
+        [[0, 0, 3], [-1, 1, 1], [1, 1, 1], randomColor('aa')],
+        [[0, 0, -3], [1, 1, -1], [1, -1, -1], randomColor('aa')],
+        [[0, 0, -3], [1, -1, -1], [-1, -1, -1], randomColor('aa')],
+        [[0, 0, -3], [-1, -1, -1], [-1, 1, -1], randomColor('aa')],
+        [[0, 0, -3], [-1, 1, -1], [1, 1, -1], randomColor('aa')]];
+        var mx, my;
+
+        window.onload = function () {
+            ctx = document.getElementById("output").getContext('2d');
+            ctx.translate(width / 2, height / 2);
+            ctx.scale(sc, sc);
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 0.5 / sc;
+        }
+
+        window.onmousemove = function (e) {
+            if (mx == undefined) {
+                mx = e.clientX;
+                my = e.clientY;
+                return false;
+            }
+
+            theta -= (e.clientX - mx) * 0.01;
+            pi -= (e.clientY - my) * 0.01;
+            if (pi > Math.PI / 2) pi = Math.PI / 2;
+            if (pi < -Math.PI / 2) pi = -Math.PI / 2;
+
+            mx = e.clientX;
+            my = e.clientY;
+
+            project();
+
+            return false;
+        }
+
+        window.onkeydown = function (e) {
+            console.log(e);
+
+            var dx = 0, dy = 0;
+
+            switch (e.key) {
+                case 'w': case 'W': dx = Math.cos(theta); dy = Math.sin(theta); break;
+                case 'a': case 'A': dx = -Math.sin(theta); dy = Math.cos(theta); break;
+                case 's': case 'S': dx = -Math.cos(theta); dy = -Math.sin(theta); break;
+                case 'd': case 'D': dx = Math.sin(theta); dy = -Math.cos(theta); break;
+            }
+
+            player[0] += dx;
+            player[1] += dy;
+            project();
+        }
+
+        function stvToXyz(s, t, v, th, pi) {
+            var r = [];
+
+            r.push(s * (Math.sin(th)) + t * (-Math.sin(pi) * Math.cos(th)) + v * (Math.cos(pi) * Math.cos(th)));
+            r.push(s * (-Math.cos(th)) + t * (-Math.sin(pi) * Math.sin(th)) + v * (Math.cos(pi) * Math.sin(th)));
+            r.push(t * (Math.cos(pi)) + v * (Math.sin(pi)));
+
+            return r;
+        }
+
+        function xyzToStv(xyz, th, pi) {
+            var r = [];
+            var t = [xyz[0], xyz[1], xyz[2]];
+            for (var i = 0; i < 3; i++)
+                t[i] -= player[i];
+
+            r.push(t[0] * (Math.sin(th)) + t[1] * (-Math.cos(th)));
+            r.push(t[0] * (-Math.sin(pi) * Math.cos(th)) + t[1] * (-Math.sin(pi) * Math.sin(th)) + t[2] * (Math.cos(pi)));
+            r.push(t[0] * (Math.cos(pi) * Math.cos(th)) + t[1] * (Math.cos(pi) * Math.sin(th)) + t[2] * (Math.sin(pi)));
+
+            return r;
+        }
+
+        function project() {
+            ctx.beginPath();
+            ctx.fillStyle = "#aaaaaa";
+            ctx.fillRect(-width, -height, 2 * width, 2 * height);
+            ctx.fill();
+
+            var t = [];
+
+            for (var i = 0; i < objs.length; i++) {
+                var sum = 0;
+                t.push([]);
+
+                for (var j = 0; j < objs[i].length - 1; j++) {
+                    t[i].push(xyzToStv(objs[i][j], theta, pi));
+                    sum += t[i][j][2];
+                }
+
+                t[i].push(objs[i][objs[i].length - 1]);
+                t[i].push(sum / (objs[i].length - 1));
+            }
+
+            t.sort((a, b) => (b[b.length - 1] - a[a.length - 1]));
+
+            for (var i = 0; i < t.length; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = t[i][t[i].length - 2];
+                ctx.moveTo(t[i][t[i].length - 3][0], -t[i][t[i].length - 3][1]);
+
+                for (var j = 0; j < t[i].length - 2; j++)
+                    ctx.lineTo(t[i][j][0], -t[i][j][1]);
+
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function randomColor(alpha) {
+            if (alpha == undefined) alpha = "00";
+
+            var r = "#";
+
+            for (var i = 0; i < 3; i++) {
+                var t = parseInt(256 * Math.random());
+                r += ((t >= 16) ? (t.toString(16)) : ("0" + t.toString(16)));
+            }
+
+            return r + alpha;
+        }
+
+//////////////////////////////////////////////////
+    </script>
+</head>
+
+<body>
+    <canvas id="output" width="500" height="500"></canvas>
+</body>
+
+</html>
